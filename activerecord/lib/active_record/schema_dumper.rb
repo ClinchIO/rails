@@ -40,6 +40,11 @@ module ActiveRecord
     # should not be dumped to db/schema.rb.
     cattr_accessor :unique_ignore_pattern, default: /^uniq_rails_[0-9a-f]{10}$/
 
+    ##
+    # :singleton-method:
+    # Specifies if columns in create_table block should be ordered alphabetically by name.
+    cattr_accessor :sort_table_columns, default: true
+
     class << self
       def dump(pool = ActiveRecord::Base.connection_pool, stream = $stdout, config = ActiveRecord::Base)
         pool.with_connection do |connection|
@@ -192,7 +197,7 @@ module ActiveRecord
           tbl.puts ", force: :cascade do |t|"
 
           # then dump all non-primary key columns
-          columns.sort_by(&:name).each do |column|
+          sorted_columns(columns).each do |column|
             raise StandardError, "Unknown type '#{column.sql_type}' for column '#{column.name}'" unless @connection.valid_type?(column.type)
             next if column.name == pk
 
@@ -363,6 +368,10 @@ module ActiveRecord
 
       def relation_name(name)
         name
+      end
+
+      def sorted_columns(columns)
+        self.class.sort_table_columns ? columns.sort_by(&:name) : columns
       end
 
       def remove_prefix_and_suffix(table)
